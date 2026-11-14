@@ -1,0 +1,14 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Example Splat.unity
+    guid: 446a51576d9134f13819e5e7ad8dca6b
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 570c046d706e844fa8410f99dc719be6, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 14844d790351a471795596576a02f39e, type: 2}
+  m_UseUCBPForAssetBundles: 0

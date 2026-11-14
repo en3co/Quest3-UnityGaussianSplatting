@@ -1,0 +1,49 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# IDE and OS
+.vs/
+.idea/
+.vscode/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.DS_Store
+Thumbs.db
+
+# Builds and local editor state
+*.apk
+*.aab
+*.unitypackage
+*.app
+.utmp/
+ExportedObj/
+sysinfo.txt
+crashlytics-buildid.txt
+BurstDebugInformation_DoNotShip/
+InitTestScene*.unity*
+
+# Plastic and Collab leftovers
+.plastic/
+.collabignore
+ignore.conf
+InitTestScene*.unity.meta

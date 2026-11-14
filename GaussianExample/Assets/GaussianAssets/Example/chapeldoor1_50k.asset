@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b71fae31e6c7d438e8566dc713e666, type: 3}
+  m_Name: chapeldoor1_50k
+  m_EditorClassIdentifier: GaussianSplatting::GaussianSplatting.Runtime.GaussianSplatAsset
+  m_FormatVersion: 20231020
+  m_SplatCount: 50000
+  m_BoundsMin: {x: -250.17636, y: -239.39685, z: -235.05719}
+  m_BoundsMax: {x: 227.49014, y: 239.12634, z: 243.83807}
+  m_DataHash:
+    serializedVersion: 2
+    Hash: 36e4e765277ba00b60df668ef89e9a6f
+  m_PosFormat: 0
+  m_ScaleFormat: 0
+  m_SHFormat: 0
+  m_ColorFormat: 0
+  m_PosData: {fileID: 4900000, guid: cd90c510e78614ae38f71da39debc551, type: 3}
+  m_ColorData: {fileID: 4900000, guid: 8fd694a411f3e4392b9fc0cd8ecc289e, type: 3}
+  m_OtherData: {fileID: 4900000, guid: 970aa562ff9204717b5f8989c4e14067, type: 3}
+  m_SHData: {fileID: 4900000, guid: c8437b8fe65bc49db9a4edfc995673d1, type: 3}
+  m_ChunkData: {fileID: 0}
+  m_Cameras: []
