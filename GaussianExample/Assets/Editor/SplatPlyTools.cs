@@ -8,8 +8,8 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor;
 using UnityEngine;
 
-// Binary little-endian Gaussian PLY tools. Same random keep as subsample_gsplat.py,
-// plus a same-layout merge. Scene placement is baked from each object's transform.
+// Binary little-endian Gaussian PLY tools. Subsample keeps a random subset.
+// Merge either concatenates two files or exports two scene objects in world space.
 // The existing Create GaussianSplatAsset window turns the PLY into an asset.
 public static class SplatPlyTools
 {
@@ -121,27 +121,6 @@ public static class SplatPlyTools
         }
     }
 
-    public struct Placement
-    {
-        public bool Bake;
-        public Matrix4x4 Matrix;
-        public Quaternion Rotation;
-        public Vector3 Scale;
-
-        public static Placement None => new Placement { Bake = false };
-
-        public static Placement FromTransform(Transform transform)
-        {
-            return new Placement
-            {
-                Bake = true,
-                Matrix = transform.localToWorldMatrix,
-                Rotation = transform.rotation,
-                Scale = transform.lossyScale
-            };
-        }
-    }
-
     public static int MergePlaced(GaussianSplatRenderer first, GaussianSplatRenderer second, string output)
     {
         var dir = Path.Combine(Path.GetTempPath(), "splat-ply-merge");
@@ -227,11 +206,6 @@ public static class SplatPlyTools
 
     public static int Merge(string first, string second, string output)
     {
-        return Merge(first, second, output, Placement.None, Placement.None);
-    }
-
-    public static int Merge(string first, string second, string output, Placement firstPlace, Placement secondPlace)
-    {
         first = ExpandPath(first);
         second = ExpandPath(second);
         output = ExpandPath(output);
@@ -249,141 +223,25 @@ public static class SplatPlyTools
         Directory.CreateDirectory(Path.GetDirectoryName(output) ?? ".");
         using var dst = new FileStream(output, FileMode.Create, FileAccess.Write);
         WriteHeader(dst, a.Properties, total);
-        AppendVertices(first, a, dst, firstPlace);
-        AppendVertices(second, b, dst, secondPlace);
+        AppendVertices(first, a, dst);
+        AppendVertices(second, b, dst);
         return total;
     }
 
-    static void AppendVertices(string path, Header header, Stream dst, Placement placement)
+    static void AppendVertices(string path, Header header, Stream dst)
     {
         using var src = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         src.Position = header.DataOffset;
         var left = (long)header.VertexCount * header.Stride;
-        if (!placement.Bake)
-        {
-            var buffer = new byte[1024 * 1024];
-            while (left > 0)
-            {
-                var n = src.Read(buffer, 0, (int)Math.Min(buffer.Length, left));
-                if (n <= 0)
-                    throw new EndOfStreamException(path);
-                dst.Write(buffer, 0, n);
-                left -= n;
-            }
-            return;
-        }
-
-        var layout = FloatLayout.From(header);
-        var record = new byte[header.Stride];
+        var buffer = new byte[1024 * 1024];
         while (left > 0)
         {
-            ReadExact(src, record);
-            BakeRecord(record, layout, placement);
-            dst.Write(record, 0, record.Length);
-            left -= record.Length;
+            var n = src.Read(buffer, 0, (int)Math.Min(buffer.Length, left));
+            if (n <= 0)
+                throw new EndOfStreamException(path);
+            dst.Write(buffer, 0, n);
+            left -= n;
         }
-    }
-
-    struct FloatLayout
-    {
-        public int X, Y, Z, S0, S1, S2, R0, R1, R2, R3;
-
-        public static FloatLayout From(Header header)
-        {
-            return new FloatLayout
-            {
-                X = Offset(header, "x"),
-                Y = Offset(header, "y"),
-                Z = Offset(header, "z"),
-                S0 = Offset(header, "scale_0"),
-                S1 = Offset(header, "scale_1"),
-                S2 = Offset(header, "scale_2"),
-                R0 = Offset(header, "rot_0"),
-                R1 = Offset(header, "rot_1"),
-                R2 = Offset(header, "rot_2"),
-                R3 = Offset(header, "rot_3")
-            };
-        }
-
-        static int Offset(Header header, string name)
-        {
-            var offset = 0;
-            foreach (var line in header.Properties)
-            {
-                var tokens = line.Split(' ');
-                if (tokens.Length < 3 || tokens[0] != "property")
-                    continue;
-                var size = tokens[1] switch
-                {
-                    "float" => 4,
-                    "double" => 8,
-                    "uchar" => 1,
-                    _ => 0
-                };
-                if (tokens[2] == name)
-                {
-                    if (tokens[1] != "float")
-                        throw new InvalidDataException(name + " must be a float property to bake placement.");
-                    return offset;
-                }
-                offset += size;
-            }
-            throw new InvalidDataException("PLY is missing " + name + ", so placement cannot be baked.");
-        }
-    }
-
-    static void BakeRecord(byte[] record, FloatLayout layout, Placement placement)
-    {
-        var pos = placement.Matrix.MultiplyPoint3x4(new Vector3(
-            ReadFloat(record, layout.X),
-            ReadFloat(record, layout.Y),
-            ReadFloat(record, layout.Z)));
-        WriteFloat(record, layout.X, pos.x);
-        WriteFloat(record, layout.Y, pos.y);
-        WriteFloat(record, layout.Z, pos.z);
-
-        // PLY stores rot_0..3 as w, x, y, z. Match the package export: flip axes for a negative scale, then apply the object rotation.
-        var q = new Quaternion(
-            ReadFloat(record, layout.R1),
-            ReadFloat(record, layout.R2),
-            ReadFloat(record, layout.R3),
-            ReadFloat(record, layout.R0));
-        var scale = placement.Scale;
-        if (scale.x < 0f)
-        {
-            q.y = -q.y;
-            q.z = -q.z;
-        }
-        if (scale.y < 0f)
-        {
-            q.x = -q.x;
-            q.z = -q.z;
-        }
-        if (scale.z < 0f)
-        {
-            q.x = -q.x;
-            q.y = -q.y;
-        }
-        q = Quaternion.Normalize(placement.Rotation * q);
-        WriteFloat(record, layout.R0, q.w);
-        WriteFloat(record, layout.R1, q.x);
-        WriteFloat(record, layout.R2, q.y);
-        WriteFloat(record, layout.R3, q.z);
-
-        WriteFloat(record, layout.S0, Mathf.Log(Mathf.Max(Mathf.Exp(ReadFloat(record, layout.S0)) * Mathf.Abs(scale.x), 1e-20f)));
-        WriteFloat(record, layout.S1, Mathf.Log(Mathf.Max(Mathf.Exp(ReadFloat(record, layout.S1)) * Mathf.Abs(scale.y), 1e-20f)));
-        WriteFloat(record, layout.S2, Mathf.Log(Mathf.Max(Mathf.Exp(ReadFloat(record, layout.S2)) * Mathf.Abs(scale.z), 1e-20f)));
-    }
-
-    static float ReadFloat(byte[] record, int offset)
-    {
-        return BitConverter.ToSingle(record, offset);
-    }
-
-    static void WriteFloat(byte[] record, int offset, float value)
-    {
-        var bytes = BitConverter.GetBytes(value);
-        Buffer.BlockCopy(bytes, 0, record, offset, 4);
     }
 
     static void WriteHeader(Stream dst, List<string> properties, int count)
